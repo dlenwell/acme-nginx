@@ -22,18 +22,18 @@ CA = "https://acme-v01.api.letsencrypt.org"
 #CA = "https://acme-staging.api.letsencrypt.org"
 TOS = "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
 CHAIN = "https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem"
-
+CHALLENGEDIR = '/srv/www/.well-known/acme-challenge/'
 
 def reload_nginx():
     """ Returns nginx master process id and sends HUP to it """
-    m_pid = max(map(int, subprocess.Popen(
-        'ps -o ppid= -C nginx'.split(),
-        stdout=subprocess.PIPE).communicate()[0].split()))
-    print('{0} {1}'.format(time.strftime("%b %d %H:%M:%S"),
-        'Killing nginx process {0} with HUP'.format(m_pid)))
-    os.kill(m_pid, 1)
-    return m_pid
-
+    #m_pid = max(map(int, subprocess.Popen(
+    #    'ps -o ppid= -C nginx'.split(),
+    #    stdout=subprocess.PIPE).communicate()[0].split()))
+    #print('{0} {1}'.format(time.strftime("%b %d %H:%M:%S"),
+    #    'Killing nginx process {0} with HUP'.format(m_pid)))
+    #os.kill(m_pid, 1)
+    #return m_pid
+    return None
 
 def nginx_challenge(domain, token, thumbprint, vhost_conf):
     """
@@ -48,22 +48,9 @@ def nginx_challenge(domain, token, thumbprint, vhost_conf):
         int nginx master pid
         string name of temporary directory for challenge
     """
-    alias = tempfile.mkdtemp()
+    alias = CHALLENGEDIR
     os.chmod(alias, 0o777)
-    vhost = """
-server {{
-    listen 80;
-    listen [::]:80;
-    server_name {domain};
-    location /.well-known/acme-challenge/ {{
-        alias {alias}/;
-        try_files $uri =404;
-    }}
-}}""".format(domain=domain, alias=alias)
-    with open(vhost_conf, 'w') as fd:
-        fd.write(vhost)
-    os.chmod(vhost_conf, 0o644)
-    reload_nginx()
+    
     # Write challenge file
     with open('{0}/{1}'.format(alias, token), 'w') as fd:
         fd.write("{0}.{1}".format(token, thumbprint))
